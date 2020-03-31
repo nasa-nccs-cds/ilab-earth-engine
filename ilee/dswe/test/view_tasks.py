@@ -3,7 +3,7 @@ from ee.batch import Task, Export
 from typing import List, Union, Tuple, Dict, Optional
 ee.Initialize()
 
-cancel_tasks = False
+cancel_tasks = True
 
 print( "Current tasks:")
 for task in Task.list():

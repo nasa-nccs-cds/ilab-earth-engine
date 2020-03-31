@@ -31,8 +31,8 @@ def cdswe(bounds = None, filters = None):
     filters: List of additional ee.Filter objects to apply to input Landsat data (Default: None)
     '''
 
-    tm = ee.ImageCollection('LANDSAT/LT05/C01/T1_SR');
-    etm = ee.ImageCollection('LANDSAT/LE07/C01/T1_SR');
+    tm = ee.ImageCollection('LANDSAT/LT05/C01/T1_SR')
+    etm = ee.ImageCollection('LANDSAT/LE07/C01/T1_SR')
 
     if bounds is not None:
         xmin, ymin, xmax, ymax = bounds
@@ -50,19 +50,15 @@ def cdswe(bounds = None, filters = None):
         return x.select(bands).rename(new_bands)
 
     def createCloudAndShadowBand(x):
-        qa = x.select('pixel_qa');
-        cloudBitMask = ee.Number(2).pow(5).int();
-        cloudShadowBitMask = ee.Number(2).pow(3).int();
-        cloud = qa.bitwiseAnd(cloudBitMask).neq(0);
-        cloudShadow = qa.bitwiseAnd(cloudShadowBitMask).neq(0);
-        mask = ee.Image(0).where(cloud.eq(1), 1) \
-            .where(cloudShadow.eq(1), 1)\
-            .rename('cloud_mask');
+        qa = x.select('pixel_qa')
+        cloudBitMask = ee.Number(2).pow(5).int()
+        cloudShadowBitMask = ee.Number(2).pow(3).int()
+        cloud = qa.bitwiseAnd(cloudBitMask).neq(0)
+        cloudShadow = qa.bitwiseAnd(cloudShadowBitMask).neq(0)
+        mask = ee.Image(0).where(cloud.eq(1), 1).where(cloudShadow.eq(1), 1).rename('cloud_mask')
         return x.addBands(mask)
 
-    landsat = ee.ImageCollection(tm.merge(etm).sort('system:time_start')) \
-        .map(renameBands) \
-        .map(createCloudAndShadowBand)
+    landsat = ee.ImageCollection(tm.merge(etm).sort('system:time_start')).map(renameBands).map(createCloudAndShadowBand)
 
     # INDICES
     def calc_mndwi(image):

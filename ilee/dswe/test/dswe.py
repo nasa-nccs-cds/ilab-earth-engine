@@ -10,10 +10,10 @@ ee.Initialize()
 c0 = [ -160, 0.0 ]
 c1 = [ -60, 80.0 ]
 
-geometry1 = ee.Geometry.Polygon( [[-161.93472812126566,66.12210188009729], [-158.07303378532816,66.12210188009729], [-158.07303378532816,66.922984952725],
+geometry = ee.Geometry.Polygon( [[-161.93472812126566,66.12210188009729], [-158.07303378532816,66.12210188009729], [-158.07303378532816,66.922984952725],
                                  [-161.93472812126566,66.922984952725], [-161.93472812126566,66.12210188009729]], geodesic=False, proj=None )
 
-geometry = ee.Geometry.Polygon( [[ c0[0], c0[1] ], [c1[0], c0[1] ], [c1[0], c1[1]], [ c0[0], c1[1]], [ c0[0], c0[1] ]], geodesic=False, proj=None )
+geometry1 = ee.Geometry.Polygon( [[ c0[0], c0[1] ], [c1[0], c0[1] ], [c1[0], c1[1]], [ c0[0], c1[1]], [ c0[0], c0[1] ]], geodesic=False, proj=None )
 
 region = geometry.bounds()
 result_bands = [ f'pDSWE{ix}' for ix in range(4) ]
@@ -43,14 +43,3 @@ while True:
     elapsed = time.time()-t0
     print( f" Task State = {status['state']}, elapsed = {elapsed:.2f} sec ({elapsed/60:.2f} min)" )
     if not task.active(): break
-
-# path = pdswe.getDownloadURL( dict( name=result_name, bands = bands, region=region ) )
-# print( f"Downloading {path}" )
-#
-# urllib.request.urlretrieve( path, zfilename )
-# os.system(f'cd /tmp; rm *.tif; unzip {zfilename}')
-# print( f"Viewing geotiff: {tfilename}" )
-# array: xa.DataArray = xa.open_rasterio(tfilename)
-# print( f"Downloaded array {result_bands[0]}, dims = {array.dims}, shape = {array.shape}")
-# array[0].plot.imshow()
-# plt.show()
