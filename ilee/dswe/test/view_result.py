@@ -1,26 +1,19 @@
-from ilee.dswe.cdswe import cdswe
-import ee, os, time, urllib
+import ee, os, time, urllib, sys
+from ee.batch import Task, Export
+from typing import List, Union, Tuple, Dict, Optional
 import matplotlib.pyplot as plt
 import xarray as xa
+import datetime
+from ilee.dswe.manager import TaskMgr, DSWE
 
-googleDrive="/Users/tpmaxwel/GoogleDrive"
+ee.Initialize()
+taskMgr = TaskMgr("/Users/tpmaxwel/GoogleDrive")
+crange = dict( awesh=[1000, -6000], ndvi=[-2000, 8000], swir2=[0,1400], swir1=[0,4000], mndwi=[0,10000], test1=[0,3], test2=[0,3], test3=[0,3], test4=[0,3], test5=[0,3] )
+dtime = "4.2.20_14.51.38"
 
-result_name = 'pinun.tif'
+reprocess = True
+plot_band = "swir1"   # "g"
 
-result_bands = [ f'pDSWE{ix}' for ix in range(4) ]
-bands = [ { 'id': result_band } for result_band in result_bands ]
-
-tfilename = os.path.join( googleDrive, result_name )
-
-print( f"Viewing geotiff: {tfilename}" )
-array: xa.DataArray = xa.open_rasterio(tfilename)
-print( f"Downloaded array {result_bands[0]}, dims = {array.dims}, shape = {array.shape}")
-
-fig, ax = plt.subplots(2,2)
-
-array[0].plot.imshow( ax=ax[0,0], cmap="jet"  )
-array[1].plot.imshow( ax=ax[0,1], cmap="jet"  )
-array[2].plot.imshow( ax=ax[1,0], cmap="jet"  )
-array[3].plot.imshow( ax=ax[1,1], cmap="jet"  )
-
-plt.show()
+result_name = f"LT05.C01.T1_SR.{plot_band}_{dtime}"
+task_comlpeted = True
+taskMgr.viewResult( result_name, crange.get( plot_band, [0,1000 ] ) )

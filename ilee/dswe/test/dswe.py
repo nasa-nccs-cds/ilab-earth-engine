@@ -1,45 +1,35 @@
 from ilee.dswe.cdswe import cdswe
-import ee, os, time, urllib
+import ee, os, time
 from ee.batch import Task, Export
+from ilee.dswe.manager import TaskMgr, DSWE
 from typing import List, Union, Tuple, Dict, Optional
-import matplotlib.pyplot as plt
-import xarray as xa
-
 ee.Initialize()
 
-c0 = [ -160, 0.0 ]
-c1 = [ -60, 80.0 ]
+reprocess = True
+result_name = "LT05.C01.T1_SR.pdswe"
+taskMgr = TaskMgr("/Users/tpmaxwel/GoogleDrive")
 
-geometry = ee.Geometry.Polygon( [[-161.93472812126566,66.12210188009729], [-158.07303378532816,66.12210188009729], [-158.07303378532816,66.922984952725],
-                                 [-161.93472812126566,66.922984952725], [-161.93472812126566,66.12210188009729]], geodesic=False, proj=None )
+if reprocess or not taskMgr.exists( result_name ):
 
-geometry1 = ee.Geometry.Polygon( [[ c0[0], c0[1] ], [c1[0], c0[1] ], [c1[0], c1[1]], [ c0[0], c1[1]], [ c0[0], c0[1] ]], geodesic=False, proj=None )
+    c0 = [-161.93472812126566, 66.12210188009729 ]
+    c1 = [-158.07303378532816, 66.922984952725 ]
 
-region = geometry.bounds()
-result_bands = [ f'pDSWE{ix}' for ix in range(4) ]
-result_name = 'pinun'
-bands = [ { 'id': result_band } for result_band in result_bands ]
-zfilename = f"/tmp/{result_name}.zip"
-tfilename = f"/tmp/{result_name}.{result_bands[0]}.tif"
+    geometry = ee.Geometry.Polygon([[c0[0], c0[1]], [c1[0], c0[1]], [c1[0], c1[1]], [c0[0], c1[1]], [c0[0], c0[1]]], geodesic=False, proj=None)
 
-filters = [
-  ee.Filter.date('2016-01-01', '2019-01-01'),
-  ee.Filter.dayOfYear(153, 275), # June 1st - October 1st
-  ee.Filter.geometry(geometry)
-  ]
+    region = geometry.bounds()
 
-pdswe = cdswe( bounds = None, filters = filters )
+    filters = [
+      ee.Filter.date('2016-01-01', '2017-01-01'),
+      ee.Filter.dayOfYear(153, 275), # June 1st - October 1st
+      ee.Filter.geometry(geometry)
+      ]
 
-print( f"Exporting {result_name} to Google Drive 'dswe' folder")
-task: Task = Export.image.toDrive( pdswe, description=f'{result_name} Export',  fileNamePrefix=result_name, region=region )  # folder="dswe",
+    pdswe = cdswe(bounds=None, filters=filters)
 
-task.start()
-status: Dict = task.status()
-print(f" Task Status = {status}")
-t0 = time.time()
-while True:
-    time.sleep(5)
-    status: Dict = task.status()
-    elapsed = time.time()-t0
-    print( f" Task State = {status['state']}, elapsed = {elapsed:.2f} sec ({elapsed/60:.2f} min)" )
-    if not task.active(): break
+    task: Task = Export.image.toDrive( pdswe, description=f'pdswe Export',  fileNamePrefix=result_name, region=region, folder="dswe" )
+    taskMgr.run( task )
+
+
+taskMgr.viewResult( result_name, [0,1500] )
+
+
