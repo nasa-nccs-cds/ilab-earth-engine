@@ -140,9 +140,11 @@ def cdswe(bounds = None, filters = None):
 
     def test5(image):
         x = image.select("MNDWI").gt(-5000) \
-            .add(image.select("SWIR2").lt(1000)) \
-            .add(image.select("NIR").lt(2000))
-        return x.eq(3)
+            .add(image.select("B").lt(1000)) \
+            .add(image.select("NIR").lt(2500))\
+            .add(image.select("SWIR1").lt(3000))\
+            .add(image.select("SWIR2").lt(1000))
+        return x.eq(4)
 
     def cloudTest(image):
         return image.select('cloud_mask').eq(1)
