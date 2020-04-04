@@ -2,7 +2,9 @@ from ilee.dswe.cdswe import cdswe
 import ee, os, time, urllib
 from ee.batch import Task, Export
 from typing import List, Union, Tuple, Dict, Optional
+from functools import partial
 import matplotlib.pyplot as plt
+
 import xarray as xa
 
 def iprint( text: str, indent: int ):
@@ -150,8 +152,10 @@ class DSWE:
         return bands.set('system:time_start', image.get('system:time_start'))
 
     @classmethod
-    def test(cls, image: ee.Image, itest: int ) -> ee.Image:
-        if itest == 1:
+    def test(cls, itest: int, image: ee.Image  ) -> ee.Image:
+        if itest == 0:
+            return image.select('cloud_mask').eq(1)
+        elif itest == 1:
             return image.select("MNDWI").gt( 0.0124 ).rename("t1")
         elif itest == 2:
             return image.select("MBSR").gt(0).rename("t2")
@@ -172,13 +176,13 @@ class DSWE:
             return x.eq(5).rename("t5")
 
     @classmethod
-    def cloudTest(cls, image: ee.Image) -> ee.Image:
-        return image.select('cloud_mask').eq(1)
+    def compute_dswe(cls, image: ee.ImageCollection ) -> ee.ImageCollection:
+        indices: ee.ImageCollection = image.map( cls.indices  )
+        return indices.map( cls.get_dswe_index )
 
     @classmethod
-    def compute_dswe(cls, image: ee.Image ):
-        indices = cls.indices( image )
-        tests = { ti: cls.test( indices, ti ) for ti in range(1,6) }
+    def get_dswe_index(cls, indices: ee.Image ) -> ee.Image:
+        tests: Dict[int,ee.Image] = { ti: cls.test( ti, indices ) for ti in range(0,6) }
         tsum0 = tests[1].select('t1')\
             .add( tests[2].select('t2') ).rename("tsum0")
         tsum1 = tests[3].select('t3')\
@@ -187,5 +191,12 @@ class DSWE:
         tsum = tsum0.select('tsum0')\
             .add( tsum1.select('tsum1') ).rename("tsum")
         wetland_mask = tsum0.eq(2).And( tsum1.eq(0) ).rename("mask")
-        return tsum.where(tsum.gt(3), 1).where(tsum.eq(3), 2).where(tsum.eq(2), 4).where(tsum.lt(2), 0).where(wetland_mask, 3).rename('dswe')
+        cloud_mask = tests[0]
+        return  tsum.where(tsum.gt(3), 1)\
+                    .where(tsum.eq(3), 2)\
+                    .where(tsum.eq(2), 4)\
+                    .where(tsum.lt(2), 0)\
+                    .where(wetland_mask, 3)\
+                    .where(cloud_mask, 255)\
+                    .toByte().rename('dswe')
 

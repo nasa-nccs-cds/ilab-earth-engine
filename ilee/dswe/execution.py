@@ -24,12 +24,10 @@ filters = [
   ]
 
 etm = ee.ImageCollection('LANDSAT/LE07/C01/T1_SR').filter(filters)
-image0 = DSWE.addCloudAndShadowBand(  DSWE.renameBands( etm.sort('system:time_start').first() ) )
+images: ee.ImageCollection = etm.sort('system:time_start').map( DSWE.renameBands ).map( DSWE.addCloudAndShadowBand )
 
-result: ee.Image = DSWE.compute_dswe( image0 )
-TaskMgr.printInfo( result )
-
-task: Task = Export.image.toDrive( result, description=f'{plot_band} Export',  fileNamePrefix=result_name, region=region )
+results: ee.ImageCollection = DSWE.compute_dswe( images )
+task: Task = Export.image.toDrive( results.first(), description=f'{plot_band} Export',  fileNamePrefix=result_name, region=region )
 
 if taskMgr.run( task ):
     print(f"Exporting image {result_name}.tif")
