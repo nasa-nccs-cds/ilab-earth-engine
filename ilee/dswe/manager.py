@@ -83,6 +83,14 @@ class TaskMgr:
         for (key, value) in icol.getInfo().items():
             cls.printElement( key, value, 3 )
 
+    @classmethod
+    def print_projection_info(cls, image: ee.Image ):
+        bandNames = image.bandNames();
+        print(f'Band names: {bandNames}')
+        b1proj = image.select('B1').projection()
+        print(f'Band 1 projection: {b1proj}' )
+        b1scale = image.select('B1').projection().nominalScale()
+        print(f'Band 1 scale: {b1scale}')
 
 class InputBands:
 
@@ -181,7 +189,55 @@ class DSWE:
         return indices.map( cls.get_dswe_index )
 
     @classmethod
+    def get_transform(cls, p0: Tuple[float,float], p1: Tuple[float,float], nX: int, nY: int ) -> List[float]:
+        xScale = (p1[0] - p0[0]) / nX
+        yScale = (p1[1] - p0[1]) / nY
+        return [xScale, 0, p0[0], 0, yScale, p0[1] ]
+
+    @classmethod
+    def compute_dswe_image( cls, image: ee.Image ) -> ee.Image:
+        indices = cls.indices( image )
+        return cls.get_dswe_index( indices )
+
+    @classmethod
     def get_dswe_index(cls, indices: ee.Image ) -> ee.Image:
+        tsum, wetland_mask, cloud_mask =  cls.get_masks(indices)
+        return  tsum.where(tsum.gt(3), 1)\
+                    .where(tsum.eq(3), 2)\
+                    .where(tsum.eq(2), 4)\
+                    .where(tsum.lt(2), 0)\
+                    .where(wetland_mask, 3)\
+                    .where(cloud_mask, 255)\
+                    .toByte().rename('dswe')
+
+    @classmethod
+    def compute_water_prob_image( cls, image: ee.Image ) -> ee.Image:
+        indices = cls.indices( image )
+        return cls.get_water_prob_index( indices )
+
+    @classmethod
+    def get_water_prob_index(cls, indices: ee.Image ) -> ee.Image:
+        tsum, cloud_mask =  cls.get_masks(indices)
+        return  tsum.where(tsum.gt(3), 3)\
+                    .where(tsum.eq(3), 2)\
+                    .where(tsum.eq(2), 1)\
+                    .where(tsum.lt(2), 0)\
+                    .where(cloud_mask, 255)\
+                    .toFloat().rename('water_prob')
+
+    @classmethod
+    def get_masks(cls, indices: ee.Image ) -> Tuple[ ee.Image, ee.Image ]:
+        tests: Dict[int,ee.Image] = { ti: cls.test( ti, indices ) for ti in range(0,6) }
+        tsum =    tests[1].select('t1')       \
+            .add( tests[2].select('t2') )     \
+            .add( tests[3].select('t3') )     \
+            .add( tests[4].select('t4') )     \
+            .add( tests[5].select('t5') ).rename("tsum")
+        cloud_mask = tests[0]
+        return tsum, cloud_mask
+
+    @classmethod
+    def get_masks1(cls, indices: ee.Image ) -> Tuple[ee.Image,ee.Image,ee.Image]:
         tests: Dict[int,ee.Image] = { ti: cls.test( ti, indices ) for ti in range(0,6) }
         tsum0 = tests[1].select('t1')\
             .add( tests[2].select('t2') ).rename("tsum0")
@@ -192,11 +248,6 @@ class DSWE:
             .add( tsum1.select('tsum1') ).rename("tsum")
         wetland_mask = tsum0.eq(2).And( tsum1.eq(0) ).rename("mask")
         cloud_mask = tests[0]
-        return  tsum.where(tsum.gt(3), 1)\
-                    .where(tsum.eq(3), 2)\
-                    .where(tsum.eq(2), 4)\
-                    .where(tsum.lt(2), 0)\
-                    .where(wetland_mask, 3)\
-                    .where(cloud_mask, 255)\
-                    .toByte().rename('dswe')
+        return tsum, wetland_mask, cloud_mask
+
 

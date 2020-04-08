@@ -1,0 +1,4 @@
+client_config_backend: file
+oauth_scope:
+- https://www.googleapis.com/auth/drive
+save_credentials: false
